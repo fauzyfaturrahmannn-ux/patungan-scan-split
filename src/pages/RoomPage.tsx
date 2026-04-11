@@ -1,45 +1,183 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check, QrCode, Banknote, Users, Clock } from "lucide-react";
+import { ArrowLeft, Check, QrCode, Banknote, Users, Clock, Share2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-const items = [
-  { id: 1, name: "Nasi Goreng Spesial", price: 35000, claimedBy: ["Andi"] },
-  { id: 2, name: "Chicken Katsu", price: 42000, claimedBy: [] },
-  { id: 3, name: "Lemon Tea", price: 18000, claimedBy: ["Andi"] },
-  { id: 4, name: "Es Teh Manis", price: 12000, claimedBy: [] },
-  { id: 5, name: "French Fries (Share)", price: 28000, claimedBy: ["Andi", "Budi"] },
-  { id: 6, name: "Mie Goreng", price: 32000, claimedBy: [] },
-];
+interface Room {
+  id: string;
+  code: string;
+  name: string;
+  place_name: string;
+  host_id: string;
+  tax_percent: number;
+  service_percent: number;
+  status: string;
+}
 
-const members = [
-  { name: "Andi", avatar: "A", status: "paid", method: "qris", total: 67100 },
-  { name: "Budi", avatar: "B", status: "paid", method: "cash", total: 48300 },
-  { name: "Citra", avatar: "C", status: "unpaid", method: null, total: 51750 },
-  { name: "Dina", avatar: "D", status: "unpaid", method: null, total: 45600 },
-];
+interface Item {
+  id: string;
+  name: string;
+  qty: number;
+  price: number;
+}
+
+interface Member {
+  id: string;
+  user_id: string;
+  display_name: string;
+}
+
+interface MemberItem {
+  id: string;
+  member_id: string;
+  item_id: string;
+}
+
+interface Payment {
+  id: string;
+  member_id: string;
+  amount: number;
+  method: string;
+  status: string;
+}
 
 const RoomPage = () => {
   const navigate = useNavigate();
-  const { roomId } = useParams();
-  const [selectedItems, setSelectedItems] = useState<number[]>([1, 3, 5]);
+  const { roomCode } = useParams();
+  const { user } = useAuth();
+  const [room, setRoom] = useState<Room | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [memberItems, setMemberItems] = useState<MemberItem[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
 
-  const toggleItem = (id: number) => {
-    setSelectedItems((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+  const myMember = members.find((m) => m.user_id === user?.id);
+  const isHost = room?.host_id === user?.id;
+
+  const fetchData = useCallback(async () => {
+    if (!roomCode) return;
+    const { data: roomData } = await supabase.from("rooms").select("*").eq("code", roomCode).single();
+    if (!roomData) { navigate("/dashboard"); return; }
+    setRoom(roomData as Room);
+
+    const [itemsRes, membersRes, miRes, payRes] = await Promise.all([
+      supabase.from("room_items").select("*").eq("room_id", roomData.id),
+      supabase.from("room_members").select("*").eq("room_id", roomData.id),
+      supabase.from("member_items").select("*").eq("room_id", roomData.id),
+      supabase.from("payments").select("*").eq("room_id", roomData.id),
+    ]);
+
+    setItems((itemsRes.data || []) as Item[]);
+    setMembers((membersRes.data || []) as Member[]);
+    setMemberItems((miRes.data || []) as MemberItem[]);
+    setPayments((payRes.data || []) as Payment[]);
+    setLoading(false);
+  }, [roomCode, navigate]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Real-time subscriptions
+  useEffect(() => {
+    if (!room) return;
+    const channel = supabase
+      .channel(`room-${room.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${room.id}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "member_items", filter: `room_id=eq.${room.id}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `room_id=eq.${room.id}` }, () => fetchData())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [room, fetchData]);
+
+  const toggleItem = async (itemId: string) => {
+    if (!myMember || !room) return;
+    const existing = memberItems.find((mi) => mi.member_id === myMember.id && mi.item_id === itemId);
+    if (existing) {
+      await supabase.from("member_items").delete().eq("id", existing.id);
+    } else {
+      await supabase.from("member_items").insert({ room_id: room.id, member_id: myMember.id, item_id: itemId });
+    }
+    fetchData();
   };
 
-  const myTotal = selectedItems.reduce((sum, id) => {
-    const item = items.find((i) => i.id === id);
-    if (!item) return sum;
-    const shared = item.claimedBy.length > 0 ? item.claimedBy.length : 1;
-    return sum + item.price / shared;
-  }, 0);
+  const getItemClaimers = (itemId: string) => {
+    const claimerMemberIds = memberItems.filter((mi) => mi.item_id === itemId).map((mi) => mi.member_id);
+    return members.filter((m) => claimerMemberIds.includes(m.id));
+  };
 
-  const taxService = myTotal * 0.15;
-  const grandTotal = myTotal + taxService;
+  const calcMemberTotal = (memberId: string) => {
+    const selected = memberItems.filter((mi) => mi.member_id === memberId);
+    let subtotal = 0;
+    for (const sel of selected) {
+      const item = items.find((i) => i.id === sel.item_id);
+      if (!item) continue;
+      const claimers = memberItems.filter((mi) => mi.item_id === sel.item_id).length;
+      subtotal += (item.price * item.qty) / Math.max(claimers, 1);
+    }
+    const taxRate = (room?.tax_percent || 0) / 100;
+    const svcRate = (room?.service_percent || 0) / 100;
+    return Math.round(subtotal * (1 + taxRate + svcRate));
+  };
+
+  const mySelectedIds = myMember ? memberItems.filter((mi) => mi.member_id === myMember.id).map((mi) => mi.item_id) : [];
+
+  const mySubtotal = myMember ? (() => {
+    let sub = 0;
+    for (const itemId of mySelectedIds) {
+      const item = items.find((i) => i.id === itemId);
+      if (!item) continue;
+      const claimers = memberItems.filter((mi) => mi.item_id === itemId).length;
+      sub += (item.price * item.qty) / Math.max(claimers, 1);
+    }
+    return sub;
+  })() : 0;
+
+  const taxRate = (room?.tax_percent || 0) / 100;
+  const svcRate = (room?.service_percent || 0) / 100;
+  const myTaxSvc = mySubtotal * (taxRate + svcRate);
+  const myGrandTotal = Math.round(mySubtotal + myTaxSvc);
+
+  const myPayment = myMember ? payments.find((p) => p.member_id === myMember.id) : null;
+
+  const handlePay = async (method: "cash" | "qris") => {
+    if (!myMember || !room) return;
+    if (myPayment) {
+      await supabase.from("payments").update({ method, status: method === "qris" ? "paid" : "pending", amount: myGrandTotal }).eq("id", myPayment.id);
+    } else {
+      await supabase.from("payments").insert({
+        room_id: room.id,
+        member_id: myMember.id,
+        amount: myGrandTotal,
+        method,
+        status: method === "qris" ? "paid" : "pending",
+      });
+    }
+    toast.success(method === "qris" ? "Pembayaran QRIS berhasil!" : "Menunggu verifikasi host...");
+    fetchData();
+  };
+
+  const verifyPayment = async (paymentId: string) => {
+    await supabase.from("payments").update({ status: "paid", verified_at: new Date().toISOString() }).eq("id", paymentId);
+    toast.success("Pembayaran diverifikasi!");
+    fetchData();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!room) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,13 +188,21 @@ const RoomPage = () => {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="font-display font-bold text-sm text-foreground">Patungan Solaria Jumat</h1>
-              <p className="text-xs text-muted-foreground">Solaria Grand Indonesia · {roomId}</p>
+              <h1 className="font-display font-bold text-sm text-foreground">{room.name}</h1>
+              <p className="text-xs text-muted-foreground">{room.place_name} · {room.code}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            <span className="text-xs text-success font-medium">Live</span>
+          <div className="flex items-center gap-3">
+            <button onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/join/${room.code}`);
+              toast.success("Link disalin!");
+            }} className="text-muted-foreground hover:text-foreground">
+              <Share2 size={18} />
+            </button>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span className="text-xs text-success font-medium">Live</span>
+            </div>
           </div>
         </div>
       </header>
@@ -70,15 +216,20 @@ const RoomPage = () => {
             </h2>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
-            {members.map((m) => (
-              <div key={m.name} className="flex-shrink-0 flex flex-col items-center gap-1.5">
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold border-2 ${m.status === "paid" ? "border-success bg-success/10 text-success" : "border-border bg-muted text-muted-foreground"}`}>
-                  {m.avatar}
+            {members.map((m) => {
+              const payment = payments.find((p) => p.member_id === m.id);
+              const isPaid = payment?.status === "paid";
+              return (
+                <div key={m.id} className="flex-shrink-0 flex flex-col items-center gap-1.5">
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold border-2 ${isPaid ? "border-success bg-success/10 text-success" : "border-border bg-muted text-muted-foreground"}`}>
+                    {m.display_name[0].toUpperCase()}
+                  </div>
+                  <span className="text-xs text-foreground font-medium">{m.display_name.split(" ")[0]}</span>
+                  {isPaid && <span className="text-[10px] text-success font-medium">✓ Lunas</span>}
+                  {m.user_id === room.host_id && <span className="text-[10px] text-primary font-medium">Host</span>}
                 </div>
-                <span className="text-xs text-foreground font-medium">{m.name}</span>
-                {m.status === "paid" && <span className="text-[10px] text-success font-medium">✓ Lunas</span>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -87,7 +238,8 @@ const RoomPage = () => {
           <h2 className="font-display font-semibold text-sm text-foreground mb-3">Pilih Pesananmu</h2>
           <div className="space-y-2">
             {items.map((item) => {
-              const selected = selectedItems.includes(item.id);
+              const selected = mySelectedIds.includes(item.id);
+              const claimers = getItemClaimers(item.id);
               return (
                 <button
                   key={item.id}
@@ -99,14 +251,16 @@ const RoomPage = () => {
                       {selected && <Check size={14} className="text-primary-foreground" />}
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-medium text-foreground">{item.name}</p>
-                      {item.claimedBy.length > 1 && (
-                        <p className="text-xs text-muted-foreground">Sharing · {item.claimedBy.length} orang</p>
+                      <p className="text-sm font-medium text-foreground">{item.name} {item.qty > 1 && `x${item.qty}`}</p>
+                      {claimers.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {claimers.length > 1 ? `Sharing · ${claimers.map((c) => c.display_name.split(" ")[0]).join(", ")}` : claimers[0].display_name.split(" ")[0]}
+                        </p>
                       )}
                     </div>
                   </div>
                   <p className="font-display font-semibold text-sm text-foreground">
-                    Rp{item.price.toLocaleString("id-ID")}
+                    Rp{(item.price * item.qty).toLocaleString("id-ID")}
                   </p>
                 </button>
               );
@@ -114,46 +268,62 @@ const RoomPage = () => {
           </div>
         </div>
 
-        {/* Total */}
-        <div className="glass-card rounded-xl p-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal pesananmu</span>
-            <span className="text-foreground">Rp{Math.round(myTotal).toLocaleString("id-ID")}</span>
+        {/* My Total */}
+        {mySelectedIds.length > 0 && (
+          <div className="glass-card rounded-xl p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Subtotal pesananmu</span>
+              <span className="text-foreground">Rp{Math.round(mySubtotal).toLocaleString("id-ID")}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Tax + Service ({room.tax_percent + room.service_percent}%)</span>
+              <span className="text-foreground">Rp{Math.round(myTaxSvc).toLocaleString("id-ID")}</span>
+            </div>
+            <div className="border-t border-border pt-2 flex justify-between">
+              <span className="font-display font-bold text-foreground">Total Bayar</span>
+              <span className="font-display font-bold text-lg text-primary">Rp{myGrandTotal.toLocaleString("id-ID")}</span>
+            </div>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Tax + Service (15%)</span>
-            <span className="text-foreground">Rp{Math.round(taxService).toLocaleString("id-ID")}</span>
-          </div>
-          <div className="border-t border-border pt-2 flex justify-between">
-            <span className="font-display font-bold text-foreground">Total Bayar</span>
-            <span className="font-display font-bold text-lg text-primary">Rp{Math.round(grandTotal).toLocaleString("id-ID")}</span>
-          </div>
-        </div>
+        )}
 
         {/* Payment */}
-        {!showPayment ? (
-          <Button className="w-full gap-2 shadow-primary" size="lg" onClick={() => setShowPayment(true)}>
-            Bayar Sekarang
-          </Button>
-        ) : (
-          <div className="space-y-3 animate-fade-up">
-            <h2 className="font-display font-semibold text-sm text-foreground">Pilih Metode Pembayaran</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <button className="glass-card rounded-xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:ring-2 hover:ring-primary transition-all">
-                <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
-                  <QrCode size={24} className="text-accent-foreground" />
-                </div>
-                <span className="font-display font-semibold text-sm text-foreground">QRIS</span>
-                <span className="text-xs text-muted-foreground">Auto verifikasi</span>
-              </button>
-              <button className="glass-card rounded-xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:ring-2 hover:ring-primary transition-all">
-                <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
-                  <Banknote size={24} className="text-accent-foreground" />
-                </div>
-                <span className="font-display font-semibold text-sm text-foreground">Cash</span>
-                <span className="text-xs text-muted-foreground">Verifikasi host</span>
-              </button>
+        {mySelectedIds.length > 0 && (!myPayment || myPayment.status === "unpaid") && (
+          !showPayment ? (
+            <Button className="w-full gap-2 shadow-primary" size="lg" onClick={() => setShowPayment(true)}>
+              Bayar Sekarang
+            </Button>
+          ) : (
+            <div className="space-y-3 animate-fade-up">
+              <h2 className="font-display font-semibold text-sm text-foreground">Pilih Metode Pembayaran</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => handlePay("qris")} className="glass-card rounded-xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:ring-2 hover:ring-primary transition-all">
+                  <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
+                    <QrCode size={24} className="text-accent-foreground" />
+                  </div>
+                  <span className="font-display font-semibold text-sm text-foreground">QRIS</span>
+                  <span className="text-xs text-muted-foreground">Auto verifikasi</span>
+                </button>
+                <button onClick={() => handlePay("cash")} className="glass-card rounded-xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:ring-2 hover:ring-primary transition-all">
+                  <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
+                    <Banknote size={24} className="text-accent-foreground" />
+                  </div>
+                  <span className="font-display font-semibold text-sm text-foreground">Cash</span>
+                  <span className="text-xs text-muted-foreground">Verifikasi host</span>
+                </button>
+              </div>
             </div>
+          )
+        )}
+
+        {myPayment?.status === "pending" && (
+          <div className="bg-warning/15 rounded-xl p-4 text-center">
+            <p className="text-sm text-warning font-medium">⏳ Menunggu verifikasi host</p>
+          </div>
+        )}
+
+        {myPayment?.status === "paid" && (
+          <div className="bg-success/15 rounded-xl p-4 text-center">
+            <p className="text-sm text-success font-medium">✓ Pembayaran lunas!</p>
           </div>
         )}
 
@@ -163,22 +333,38 @@ const RoomPage = () => {
             <Clock size={16} className="text-primary" /> Status Pembayaran
           </h2>
           <div className="space-y-2">
-            {members.map((m) => (
-              <div key={m.name} className="glass-card rounded-lg p-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${m.status === "paid" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
-                    {m.avatar}
+            {members.map((m) => {
+              const payment = payments.find((p) => p.member_id === m.id);
+              const total = calcMemberTotal(m.id);
+              return (
+                <div key={m.id} className="glass-card rounded-lg p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${payment?.status === "paid" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
+                      {m.display_name[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{m.display_name}</p>
+                      <p className="text-xs text-muted-foreground">Rp{total.toLocaleString("id-ID")}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{m.name}</p>
-                    <p className="text-xs text-muted-foreground">Rp{m.total.toLocaleString("id-ID")}</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                      payment?.status === "paid" ? "bg-success/15 text-success" :
+                      payment?.status === "pending" ? "bg-warning/15 text-warning" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {payment?.status === "paid" ? `✓ ${payment.method === "qris" ? "QRIS" : "Cash"}` :
+                       payment?.status === "pending" ? "Pending" : "Belum bayar"}
+                    </span>
+                    {isHost && payment?.status === "pending" && (
+                      <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => verifyPayment(payment.id)}>
+                        Verifikasi
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${m.status === "paid" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
-                  {m.status === "paid" ? `✓ ${m.method === "qris" ? "QRIS" : "Cash"}` : "Belum bayar"}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

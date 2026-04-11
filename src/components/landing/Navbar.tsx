@@ -20,8 +20,8 @@ const Navbar = () => {
           <a href="#fitur" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">Fitur</a>
           <a href="#cara-kerja" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">Cara Kerja</a>
           <a href="#faq" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">FAQ</a>
-          <Button variant="outline" size="sm" onClick={() => window.location.href = '/dashboard'}>Masuk</Button>
-          <Button size="sm" onClick={() => window.location.href = '/dashboard'}>Buat Patungan</Button>
+          <Button variant="outline" size="sm" onClick={() => window.location.href = '/auth'}>Masuk</Button>
+          <Button size="sm" onClick={() => window.location.href = '/auth'}>Buat Patungan</Button>
         </div>
 
         {/* Mobile toggle */}
