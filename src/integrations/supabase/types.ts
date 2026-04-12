@@ -182,6 +182,9 @@ export type Database = {
           host_id: string
           id: string
           name: string
+          payment_account_name: string | null
+          payment_account_number: string | null
+          payment_bank: string | null
           place_name: string
           receipt_image_url: string | null
           service_percent: number
@@ -195,6 +198,9 @@ export type Database = {
           host_id: string
           id?: string
           name: string
+          payment_account_name?: string | null
+          payment_account_number?: string | null
+          payment_bank?: string | null
           place_name: string
           receipt_image_url?: string | null
           service_percent?: number
@@ -208,6 +214,9 @@ export type Database = {
           host_id?: string
           id?: string
           name?: string
+          payment_account_name?: string | null
+          payment_account_number?: string | null
+          payment_bank?: string | null
           place_name?: string
           receipt_image_url?: string | null
           service_percent?: number
