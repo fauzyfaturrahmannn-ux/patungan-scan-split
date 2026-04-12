@@ -24,6 +24,9 @@ const CreateRoom = () => {
   const [creating, setCreating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [paymentBank, setPaymentBank] = useState("");
+  const [paymentAccountNumber, setPaymentAccountNumber] = useState("");
+  const [paymentAccountName, setPaymentAccountName] = useState("");
 
   // New item form
   const [newName, setNewName] = useState("");
