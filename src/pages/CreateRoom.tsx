@@ -24,6 +24,9 @@ const CreateRoom = () => {
   const [creating, setCreating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [paymentBank, setPaymentBank] = useState("");
+  const [paymentAccountNumber, setPaymentAccountNumber] = useState("");
+  const [paymentAccountName, setPaymentAccountName] = useState("");
 
   // New item form
   const [newName, setNewName] = useState("");
@@ -99,7 +102,10 @@ const CreateRoom = () => {
           place_name: placeName,
           tax_percent: taxPercent,
           service_percent: servicePercent,
-        })
+          payment_bank: paymentBank || null,
+          payment_account_number: paymentAccountNumber || null,
+          payment_account_name: paymentAccountName || null,
+        } as any)
         .select()
         .single();
 
@@ -186,6 +192,23 @@ const CreateRoom = () => {
                 <div>
                   <Label htmlFor="svc">Service (%)</Label>
                   <Input id="svc" type="number" value={servicePercent} onChange={(e) => setServicePercent(Number(e.target.value))} className="mt-1.5" />
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-border pt-4 mt-4">
+              <p className="text-sm font-medium text-foreground mb-3">💳 Info Transfer (untuk peserta)</p>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="bank">Bank / E-Wallet</Label>
+                  <Input id="bank" placeholder="Contoh: BCA, GoPay, OVO, Dana" value={paymentBank} onChange={(e) => setPaymentBank(e.target.value)} className="mt-1.5" />
+                </div>
+                <div>
+                  <Label htmlFor="accnum">No. Rekening / No. HP</Label>
+                  <Input id="accnum" placeholder="Contoh: 1234567890" value={paymentAccountNumber} onChange={(e) => setPaymentAccountNumber(e.target.value)} className="mt-1.5" />
+                </div>
+                <div>
+                  <Label htmlFor="accname">Atas Nama</Label>
+                  <Input id="accname" placeholder="Contoh: John Doe" value={paymentAccountName} onChange={(e) => setPaymentAccountName(e.target.value)} className="mt-1.5" />
                 </div>
               </div>
             </div>
