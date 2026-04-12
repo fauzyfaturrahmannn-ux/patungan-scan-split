@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Clock, Users, ArrowRight, LogOut } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Clock, Users, ArrowRight, LogOut, LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,7 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [joinCode, setJoinCode] = useState("");
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -87,6 +89,19 @@ const Dashboard = () => {
           </div>
           <Button className="gap-2 shadow-primary" onClick={() => navigate("/create-room")}>
             <Plus size={18} /> Buat Patungan
+          </Button>
+        </div>
+
+        {/* Join Room */}
+        <div className="flex items-center gap-2 mb-8 max-w-md">
+          <Input
+            placeholder="Masukkan kode room untuk join..."
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && joinCode.trim() && navigate(`/join/${joinCode.trim()}`)}
+          />
+          <Button variant="outline" className="gap-2 flex-shrink-0" onClick={() => joinCode.trim() && navigate(`/join/${joinCode.trim()}`)} disabled={!joinCode.trim()}>
+            <LogIn size={16} /> Join
           </Button>
         </div>
 

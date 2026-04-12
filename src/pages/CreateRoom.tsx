@@ -2,7 +2,8 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Camera, Upload, ArrowLeft, ArrowRight, Check, Trash2, Plus, Pencil } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Camera, Upload, ArrowLeft, ArrowRight, Check, Trash2, Plus, Pencil, Copy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -199,8 +200,30 @@ const CreateRoom = () => {
               <p className="text-sm font-medium text-foreground mb-3">💳 Info Transfer (untuk peserta)</p>
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="bank">Bank / E-Wallet</Label>
-                  <Input id="bank" placeholder="Contoh: BCA, GoPay, OVO, Dana" value={paymentBank} onChange={(e) => setPaymentBank(e.target.value)} className="mt-1.5" />
+                  <Label>Bank / E-Wallet</Label>
+                  <Select value={paymentBank} onValueChange={setPaymentBank}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue placeholder="Pilih bank atau e-wallet" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BCA">BCA</SelectItem>
+                      <SelectItem value="BNI">BNI</SelectItem>
+                      <SelectItem value="BRI">BRI</SelectItem>
+                      <SelectItem value="Mandiri">Mandiri</SelectItem>
+                      <SelectItem value="CIMB Niaga">CIMB Niaga</SelectItem>
+                      <SelectItem value="BSI">BSI</SelectItem>
+                      <SelectItem value="Permata">Permata</SelectItem>
+                      <SelectItem value="Danamon">Danamon</SelectItem>
+                      <SelectItem value="GoPay">GoPay</SelectItem>
+                      <SelectItem value="OVO">OVO</SelectItem>
+                      <SelectItem value="Dana">Dana</SelectItem>
+                      <SelectItem value="ShopeePay">ShopeePay</SelectItem>
+                      <SelectItem value="LinkAja">LinkAja</SelectItem>
+                      <SelectItem value="Jenius">Jenius</SelectItem>
+                      <SelectItem value="SeaBank">SeaBank</SelectItem>
+                      <SelectItem value="Jago">Jago</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="accnum">No. Rekening / No. HP</Label>
@@ -329,11 +352,21 @@ const CreateRoom = () => {
             <div className="glass-card rounded-xl p-4 space-y-3">
               <div className="bg-muted rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-1">Link Room</p>
-                <p className="font-mono text-sm text-foreground font-medium">{window.location.origin}/join/{createdCode}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-mono text-sm text-foreground font-medium truncate">{window.location.origin}/join/{createdCode}</p>
+                  <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/join/${createdCode}`); toast.success("Link disalin!"); }} className="text-muted-foreground hover:text-primary flex-shrink-0">
+                    <Copy size={16} />
+                  </button>
+                </div>
               </div>
               <div className="bg-muted rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-1">Kode Room</p>
-                <p className="font-display font-bold text-2xl text-primary tracking-widest">{createdCode}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-display font-bold text-2xl text-primary tracking-widest">{createdCode}</p>
+                  <button onClick={() => { navigator.clipboard.writeText(createdCode); toast.success("Kode disalin!"); }} className="text-muted-foreground hover:text-primary flex-shrink-0">
+                    <Copy size={16} />
+                  </button>
+                </div>
               </div>
             </div>
 

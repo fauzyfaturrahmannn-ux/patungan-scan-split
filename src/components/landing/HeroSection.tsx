@@ -1,8 +1,19 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Scan, Users, Zap } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowRight, Scan, Users, Zap, LogIn } from "lucide-react";
 import heroImg from "@/assets/hero-illustration.jpg";
 
 const HeroSection = () => {
+  const [joinCode, setJoinCode] = useState("");
+
+  const handleJoin = () => {
+    const code = joinCode.trim();
+    if (code) {
+      window.location.href = `/join/${code}`;
+    }
+  };
+
   return (
     <section className="relative pt-28 pb-20 overflow-hidden bg-gradient-hero">
       {/* Decorative blobs */}
@@ -31,8 +42,18 @@ const HeroSection = () => {
               <Button size="lg" className="shadow-primary gap-2" onClick={() => window.location.href = '/create-room'}>
                 + Buat Patungan <ArrowRight size={18} />
               </Button>
-              <Button size="lg" variant="outline" className="gap-2">
-                Lihat Demo
+            </div>
+
+            <div className="flex items-center gap-2 max-w-sm">
+              <Input
+                placeholder="Masukkan kode room..."
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+                className="flex-1"
+              />
+              <Button variant="outline" className="gap-2 flex-shrink-0" onClick={handleJoin} disabled={!joinCode.trim()}>
+                <LogIn size={16} /> Join Room
               </Button>
             </div>
 
