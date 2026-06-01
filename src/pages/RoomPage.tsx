@@ -246,7 +246,7 @@ const RoomPage = () => {
       <div className="container max-w-lg py-6 space-y-6">
         {isCompleted && (
           <div className="bg-success/15 rounded-xl p-4 text-center">
-            <p className="text-sm text-success font-medium">🎉 Patungan selesai! Semua sudah lunas.</p>
+            <p className="text-sm text-success font-medium">Patungan selesai! Semua sudah lunas.</p>
           </div>
         )}
 
@@ -379,7 +379,7 @@ const RoomPage = () => {
                   <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
                     <Banknote size={24} className="text-accent-foreground" />
                   </div>
-                  <span className="font-display font-semibold text-sm text-foreground">Cash/Transfer</span>
+                  <span className="font-display font-semibold text-sm text-foreground">Cash</span>
                   <span className="text-xs text-muted-foreground">Verifikasi host</span>
                 </button>
               </div>
