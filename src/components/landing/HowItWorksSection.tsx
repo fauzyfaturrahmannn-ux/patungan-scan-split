@@ -19,7 +19,7 @@ const steps = [
   {
     num: "04",
     title: "Bayar & Selesai!",
-    desc: "Setiap orang bayar sesuai total masing-masing via QRIS atau cash. Status real-time!",
+    desc: "Setiap orang bayar sesuai total masing-masing via transfer atau cash. Status real-time!",
   },
 ];
 
