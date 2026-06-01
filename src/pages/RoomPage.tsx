@@ -174,17 +174,17 @@ const RoomPage = () => {
   const handlePay = async (method: "cash" | "qris") => {
     if (!myMember || !room) return;
     if (myPayment) {
-      await supabase.from("payments").update({ method, status: method === "qris" ? "paid" : "pending", amount: myGrandTotal }).eq("id", myPayment.id);
+      await supabase.from("payments").update({ method, status: "pending", amount: myGrandTotal }).eq("id", myPayment.id);
     } else {
       await supabase.from("payments").insert({
         room_id: room.id,
         member_id: myMember.id,
         amount: myGrandTotal,
         method,
-        status: method === "qris" ? "paid" : "pending",
+        status: "pending",
       });
     }
-    toast.success(method === "qris" ? "Pembayaran QRIS berhasil!" : "Menunggu verifikasi host...");
+    toast.success("Menunggu verifikasi host...");
     fetchData();
   };
 

@@ -13,13 +13,11 @@ const JoinRoom = () => {
     const joinRoom = async () => {
       if (!user || !roomCode) return;
 
-      // Find room by code
-      const { data: room, error: roomErr } = await supabase
-        .from("rooms")
-        .select("id")
-        .eq("code", roomCode)
-        .single();
+      // Find room by code via a safe RPC (rooms table is restricted to host/members)
+      const { data: roomRows, error: roomErr } = await supabase
+        .rpc("get_room_by_code", { _code: roomCode });
 
+      const room = Array.isArray(roomRows) ? roomRows[0] : roomRows;
       if (roomErr || !room) {
         toast.error("Room tidak ditemukan");
         navigate("/dashboard");
