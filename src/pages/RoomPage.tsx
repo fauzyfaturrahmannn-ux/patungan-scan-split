@@ -111,7 +111,7 @@ const RoomPage = () => {
 
     if (allPaid) {
       await supabase.from("rooms").update({ status: "completed" }).eq("id", room.id);
-      toast.success("🎉 Semua sudah lunas! Room selesai.");
+      toast.success("Semua sudah lunas! Room selesai.");
       fetchData();
     }
   }, [room, members, payments, isHost, fetchData]);
