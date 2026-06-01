@@ -231,6 +231,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_room_by_code: {
+        Args: { _code: string }
+        Returns: {
+          code: string
+          id: string
+          name: string
+          place_name: string
+        }[]
+      }
       is_room_member: {
         Args: { _room_id: string; _user_id: string }
         Returns: boolean
