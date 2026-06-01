@@ -368,12 +368,12 @@ const RoomPage = () => {
             <div className="space-y-3 animate-fade-up">
               <h2 className="font-display font-semibold text-sm text-foreground">Pilih Metode Pembayaran</h2>
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => handlePay("qris")} className="glass-card rounded-xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:ring-2 hover:ring-primary transition-all">
+                <button onClick={() => handlePay("transfer")} className="glass-card rounded-xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:ring-2 hover:ring-primary transition-all">
                   <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
                     <QrCode size={24} className="text-accent-foreground" />
                   </div>
-                  <span className="font-display font-semibold text-sm text-foreground">QRIS</span>
-                  <span className="text-xs text-muted-foreground">Auto verifikasi</span>
+                  <span className="font-display font-semibold text-sm text-foreground">Transfer</span>
+                  <span className="text-xs text-muted-foreground">Verifikasi host</span>
                 </button>
                 <button onClick={() => handlePay("cash")} className="glass-card rounded-xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:ring-2 hover:ring-primary transition-all">
                   <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
@@ -425,7 +425,7 @@ const RoomPage = () => {
                       payment?.status === "pending" ? "bg-warning/15 text-warning" :
                       "bg-muted text-muted-foreground"
                     }`}>
-                      {payment?.status === "paid" ? `✓ ${payment.method === "qris" ? "QRIS" : "Cash"}` :
+                      {payment?.status === "paid" ? `✓ ${payment.method === "transfer" ? "Transfer" : "Cash"}` :
                        payment?.status === "pending" ? "Pending" : "Belum bayar"}
                     </span>
                     {isHost && payment?.status === "pending" && (

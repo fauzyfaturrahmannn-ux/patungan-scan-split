@@ -1,4 +1,4 @@
-import { Camera, QrCode, Users, Calculator, Shield, Clock } from "lucide-react";
+import { Camera, CreditCard, Users, Calculator, Shield, Clock } from "lucide-react";
 
 const features = [
   {
