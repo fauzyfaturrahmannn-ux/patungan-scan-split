@@ -171,7 +171,7 @@ const RoomPage = () => {
 
   const myPayment = myMember ? payments.find((p) => p.member_id === myMember.id) : null;
 
-  const handlePay = async (method: "cash" | "qris") => {
+  const handlePay = async (method: "cash" | "transfer") => {
     if (!myMember || !room) return;
     if (myPayment) {
       await supabase.from("payments").update({ method, status: "pending", amount: myGrandTotal }).eq("id", myPayment.id);

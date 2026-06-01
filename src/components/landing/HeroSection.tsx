@@ -35,7 +35,7 @@ const HeroSection = () => {
             </h1>
 
             <p className="text-muted-foreground text-lg max-w-lg leading-relaxed">
-              Scan struk, bagi tagihan otomatis, bayar via QRIS — semua real-time langsung dari browser. Gak perlu install aplikasi.
+              Scan struk, bagi tagihan otomatis, bayar via transfer — semua real-time langsung dari browser. Gak perlu install aplikasi.
             </p>
 
             <div className="flex flex-wrap gap-3">

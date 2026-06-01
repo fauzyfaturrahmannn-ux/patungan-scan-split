@@ -17,9 +17,9 @@ const features = [
     desc: "Pajak & service dibagi adil sesuai proporsi pesanan masing-masing orang.",
   },
   {
-    icon: QrCode,
-    title: "Bayar via QRIS",
-    desc: "Generate QRIS sesuai nominal. Bayar langsung, status otomatis lunas.",
+    icon: CreditCard,
+    title: "Bayar via Transfer",
+    desc: "Transfer sesuai nominal ke rekening host. Status lunas setelah verifikasi.",
   },
   {
     icon: Clock,
