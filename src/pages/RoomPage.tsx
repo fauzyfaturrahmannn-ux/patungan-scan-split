@@ -174,18 +174,21 @@ const RoomPage = () => {
 
   const handlePay = async (method: "cash" | "transfer") => {
     if (!myMember || !room) return;
+    const status = isHost ? "paid" : "pending";
+    const verified_at = isHost ? new Date().toISOString() : null;
     if (myPayment) {
-      await supabase.from("payments").update({ method, status: "pending", amount: myGrandTotal }).eq("id", myPayment.id);
+      await supabase.from("payments").update({ method, status, amount: myGrandTotal, verified_at }).eq("id", myPayment.id);
     } else {
       await supabase.from("payments").insert({
         room_id: room.id,
         member_id: myMember.id,
         amount: myGrandTotal,
         method,
-        status: "pending",
+        status,
+        verified_at,
       });
     }
-    toast.success("Menunggu verifikasi host...");
+    toast.success(isHost ? "Pembayaranmu tercatat sebagai lunas" : "Menunggu verifikasi host...");
     fetchData();
   };
 
