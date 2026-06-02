@@ -8,7 +8,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -19,8 +18,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
+  const [linkSent, setLinkSent] = useState(false);
 
   useEffect(() => {
     if (!loading && user) navigate(redirectTo);
@@ -41,8 +39,8 @@ const Auth = () => {
           options: { shouldCreateUser: true, emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
-        setOtpSent(true);
-        toast.success("Kode OTP dikirim ke emailmu!");
+        setLinkSent(true);
+        toast.success("Link verifikasi dikirim ke emailmu!");
       }
     } catch (err: any) {
       toast.error(err.message || "Terjadi kesalahan");
@@ -51,22 +49,7 @@ const Auth = () => {
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (otpCode.length !== 6) return;
-    setSubmitting(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({ email, token: otpCode, type: "email" });
-      if (error) throw error;
-      toast.success("Verifikasi berhasil!");
-      navigate(redirectTo);
-    } catch (err: any) {
-      toast.error(err.message || "Kode OTP salah");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
+  const handleResendLink = async () => {
     setSubmitting(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -74,7 +57,7 @@ const Auth = () => {
         options: { shouldCreateUser: true, emailRedirectTo: window.location.origin },
       });
       if (error) throw error;
-      toast.success("Kode OTP dikirim ulang!");
+      toast.success("Link dikirim ulang!");
     } catch (err: any) {
       toast.error(err.message || "Gagal mengirim ulang");
     } finally {
@@ -116,35 +99,20 @@ const Auth = () => {
         </div>
 
         <div className="glass-card rounded-2xl p-6 space-y-6">
-          {otpSent ? (
+          {linkSent ? (
             <div className="space-y-4">
               <div className="text-center space-y-1">
-                <h2 className="font-display font-semibold text-foreground">Masukkan Kode OTP</h2>
+                <h2 className="font-display font-semibold text-foreground">Cek emailmu</h2>
                 <p className="text-xs text-muted-foreground">
-                  Kami mengirim 6 digit kode ke <span className="font-medium text-foreground">{email}</span>
+                  Kami mengirim link verifikasi ke <span className="font-medium text-foreground">{email}</span>. Klik link tersebut untuk menyelesaikan pendaftaran.
                 </p>
               </div>
-              <div className="flex justify-center">
-                <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-              <Button className="w-full" onClick={handleVerifyOtp} disabled={submitting || otpCode.length !== 6}>
-                {submitting ? "Memverifikasi..." : "Verifikasi"}
-              </Button>
               <div className="flex items-center justify-between text-sm">
-                <button onClick={() => { setOtpSent(false); setOtpCode(""); }} className="text-muted-foreground hover:text-foreground">
+                <button onClick={() => setLinkSent(false)} className="text-muted-foreground hover:text-foreground">
                   Ganti email
                 </button>
-                <button onClick={handleResendOtp} disabled={submitting} className="text-primary font-medium hover:underline disabled:opacity-50">
-                  Kirim ulang kode
+                <button onClick={handleResendLink} disabled={submitting} className="text-primary font-medium hover:underline disabled:opacity-50">
+                  Kirim ulang link
                 </button>
               </div>
             </div>
@@ -202,7 +170,7 @@ const Auth = () => {
               </div>
             )}
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Loading..." : isLogin ? "Masuk" : "Kirim Kode OTP"}
+              {submitting ? "Loading..." : isLogin ? "Masuk" : "Kirim Link Verifikasi"}
             </Button>
           </form>
 
