@@ -58,6 +58,7 @@ const RoomPage = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
+  const [showTransferConfirm, setShowTransferConfirm] = useState(false);
 
   const myMember = members.find((m) => m.user_id === user?.id);
   const isHost = room?.host_id === user?.id;
@@ -368,7 +369,7 @@ const RoomPage = () => {
             <div className="space-y-3 animate-fade-up">
               <h2 className="font-display font-semibold text-sm text-foreground">Pilih Metode Pembayaran</h2>
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => handlePay("transfer")} className="glass-card rounded-xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:ring-2 hover:ring-primary transition-all">
+                <button onClick={() => setShowTransferConfirm(true)} className="glass-card rounded-xl p-5 flex flex-col items-center gap-3 hover:shadow-lg hover:ring-2 hover:ring-primary transition-all">
                   <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
                     <QrCode size={24} className="text-accent-foreground" />
                   </div>
@@ -383,6 +384,24 @@ const RoomPage = () => {
                   <span className="text-xs text-muted-foreground">Verifikasi host</span>
                 </button>
               </div>
+              {showTransferConfirm && (
+                <div className="glass-card rounded-xl p-4 space-y-3 animate-fade-up">
+                  <div className="space-y-1">
+                    <h3 className="font-display font-semibold text-sm text-foreground">Konfirmasi Transfer</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Pastikan kamu sudah transfer ke rekening host. Setelah konfirmasi, host akan memverifikasi pembayaranmu.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowTransferConfirm(false)}>
+                      Batal
+                    </Button>
+                    <Button className="flex-1" onClick={async () => { await handlePay("transfer"); setShowTransferConfirm(false); }}>
+                      Saya sudah transfer
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )
         )}
